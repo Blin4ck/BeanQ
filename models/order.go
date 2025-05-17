@@ -2,13 +2,11 @@ package models
 
 import (
 	"time"
-
-	"gorm.io/gorm"
 )
 
 type Order struct {
-	gorm.Model
-	ID         uint        `gorm:"primaryKey"`
+	ID         uint        `gorm:"primaryKey" json:"id"`
+	ClientID   uint        `json:"client_id"`
 	Client     Client      `gorm:"foreignKey:ClientID" json:"-"`
 	CreatedAt  time.Time   `json:"created_at"`
 	Price      int         `json:"price"`
@@ -16,8 +14,7 @@ type Order struct {
 }
 
 type OrderItem struct {
-	gorm.Model
-	ID         uint     `gorm:"primaryKey"`
+	ID         uint     `gorm:"primaryKey" json:"id"`
 	OrderID    uint     `json:"order_id"`
 	PositionID uint     `json:"position_id"`
 	Position   Position `gorm:"foreignKey:PositionID" json:"position"`
