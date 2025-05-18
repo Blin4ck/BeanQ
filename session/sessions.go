@@ -1,8 +1,8 @@
-package handler
+package session
 
 import (
 	"log"
-	"os"
+	"test/config"
 
 	"github.com/gorilla/sessions"
 )
@@ -10,7 +10,8 @@ import (
 var Store = sessions.NewCookieStore([]byte(getSessionSecret()))
 
 func getSessionSecret() string {
-	secret := os.Getenv("SESSION_SECRET")
+	config.LoadEnv()
+	secret := config.SessionSecret
 	if secret == "" {
 		log.Fatal("SESSION_SECRET environment variable is not set")
 	}

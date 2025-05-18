@@ -12,23 +12,8 @@ func CreateOrder(db *gorm.DB) gin.HandlerFunc {
 		var totalPrice int
 		var orderItems []models.OrderItem
 
-		session, err := Store.Get(c.Request, "session")
-		if err != nil {
-			c.AbortWithStatusJSON(500, gin.H{
-				"status": "500",
-				"error":  "Ошибка получения сессии",
-			})
-			return
-		}
-
-		userID, ok := session.Values["user_id"].(uint)
-		if !ok {
-			c.AbortWithStatusJSON(401, gin.H{
-				"status": "401",
-				"error":  "Пользователь не авторизован",
-			})
-			return
-		}
+		userID, _ := c.Get("user")
+		client := userID.(models.Client)
 
 		var input struct {
 			Items []struct {
@@ -69,12 +54,12 @@ func CreateOrder(db *gorm.DB) gin.HandlerFunc {
 		}
 
 		order := models.Order{
-			ClientID:   userID,
+			ClientID:   client.ID,
 			Price:      totalPrice,
 			OrderItems: orderItems,
 		}
 
-		err = db.Transaction(func(tx *gorm.DB) error {
+		err := db.Transaction(func(tx *gorm.DB) error {
 			if err := tx.Create(&order).Error; err != nil {
 				return err
 			}

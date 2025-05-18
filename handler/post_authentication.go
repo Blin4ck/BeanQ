@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"test/models"
+	"test/session"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/sessions"
@@ -11,7 +12,7 @@ import (
 	"gorm.io/gorm"
 )
 
-func PostAuthentication(db *gorm.DB) gin.HandlerFunc {
+func Login(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var input struct {
 			Email    string `json:"email" binding:"required,email"`
@@ -41,7 +42,7 @@ func PostAuthentication(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		session, err := Store.Get(c.Request, "session")
+		session, err := session.Store.Get(c.Request, "session")
 		if err != nil {
 			log.Printf("Ошибка получения сессии: %v", err)
 			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "Ошибка аутентификации"})

@@ -2,43 +2,25 @@ package main
 
 import (
 	"log"
-	"os"
+	"test/config"
 	"test/repository"
-	"time"
-
-	"github.com/joho/godotenv"
-	"gorm.io/gorm"
+	"test/router"
 )
 
-func init() {
-	if err := godotenv.Load(); err != nil {
-		log.Println("Ошибка загрузки env файла")
-	}
-}
-
 func main() {
-	var db *gorm.DB
-	var err error
-	DNS := os.Getenv("DNS")
-	var counter int
-	delay := 1 * time.Second
+	config.LoadEnv()
 
-	for counter < 5 {
-		db, err = repository.ConectDB(DNS)
+	db, err := repository.RetryConectDB(config.DBDSN, 5)
 
-		if err == nil {
-			log.Println("Успешное подключение к базе данных!")
-			break
-		}
-
-		log.Printf("Ошибка подключения: %v\nНовая попытка через %v (попытка %d/5)", err, delay, counter+1)
-		time.Sleep(delay)
-		delay *= 2
-		counter++
+	if err != nil {
+		log.Fatalf("Ошибка подключения к БД: %v", err)
 	}
+
 	repo := &repository.Repository{DB: db}
 	if err := repo.Migrate(); err != nil {
 		log.Printf("Ошибка миграции: %v", err)
 	}
 
+	r := router.SetupRouter(db)
+	r.Run(":8080")
 }

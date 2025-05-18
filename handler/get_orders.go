@@ -3,6 +3,7 @@ package handler
 import (
 	"net/http"
 	"test/models"
+	"test/session"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -11,7 +12,7 @@ import (
 func GetOrders(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		session, err := Store.Get(c.Request, "session")
+		session, err := session.Store.Get(c.Request, "session")
 		if err != nil {
 			c.AbortWithStatusJSON(500, gin.H{"status": "500", "error": "Ошибка получения сессии"})
 			return
