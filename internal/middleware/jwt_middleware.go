@@ -70,15 +70,12 @@ func (m *JWTMiddleware) Authenticate() gin.HandlerFunc {
 		// 4. Получить пользователя из базы
 		user, err := m.userRepo.GetUserByID(ctx, userID)
 		if err != nil {
-			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
-				"error": "Пользователь не найден",
-			})
+			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Пользователь не найден"})
 			return
 		}
-		// 5. ctx.Set("user", user)
 		ctx.Set("user", user)
 		ctx.Set("user_id", user.ID)
-		// 6. ctx.Next()
+		ctx.Set("role", claims.Role)
 		ctx.Next()
 	}
 }
@@ -88,7 +85,7 @@ func (m *JWTMiddleware) RequireRole(roles ...string) gin.HandlerFunc {
 		userInterface, exists := ctx.Get("user")
 
 		if !exists {
-			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Пользватель не найден в контексте"})
+			ctx.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Пользователь не найден в контексте"})
 			return
 		}
 
@@ -121,5 +118,28 @@ func (m *JWTMiddleware) RequireRole(roles ...string) gin.HandlerFunc {
 
 		ctx.Next()
 
+	}
+}
+
+// RequireRole проверяет, что пользователь обладает одной из указанных ролей.
+func RequireRole(roles ...string) gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		userInterface, exists := ctx.Get("user")
+		if !exists {
+			ctx.AbortWithStatusJSON(401, gin.H{"error": "Пользователь не найден"})
+			return
+		}
+		user, ok := userInterface.(*common.User)
+		if !ok || user.Role == nil {
+			ctx.AbortWithStatusJSON(403, gin.H{"error": "Нет роли"})
+			return
+		}
+		for _, role := range roles {
+			if user.Role.Name == role {
+				ctx.Next()
+				return
+			}
+		}
+		ctx.AbortWithStatusJSON(403, gin.H{"error": "Недостаточно прав"})
 	}
 }

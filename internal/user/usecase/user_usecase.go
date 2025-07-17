@@ -57,8 +57,9 @@ type UserResponse struct {
 
 // LoginResponse содержит данные для ответа при успешной аутентификации.
 type LoginResponse struct {
-	User  UserResponse `json:"user"`
-	Token string       `json:"token"`
+	User         UserResponse `json:"user"`
+	AccessToken  string       `json:"access_token"`
+	RefreshToken string       `json:"refresh_token"`
 }
 
 // UserUseCase реализует бизнес-логику для работы с пользователями.
@@ -91,22 +92,23 @@ func (uc *UserUseCase) RegisterUser(ctx context.Context, req RegisterRequest) er
 	return err
 }
 
-// LoginUser аутентифицирует пользователя и возвращает токен.
+// LoginUser аутентифицирует пользователя и возвращает токены.
 func (uc *UserUseCase) LoginUser(ctx context.Context, req LoginRequest) (*LoginResponse, error) {
 	if err := uc.validateLoginRequest(req); err != nil {
 		return nil, err
 	}
-	token, err := uc.authService.Login(ctx, req.Email, req.Password)
+	accessToken, refreshToken, userID, err := uc.authService.Login(ctx, req.Email, req.Password)
 	if err != nil {
 		return nil, err
 	}
-	user, err := uc.userRepo.GetUserByEmail(ctx, req.Email)
+	user, err := uc.userRepo.GetUserByID(ctx, userID)
 	if err != nil {
 		return nil, ErrUserNotFound
 	}
 	return &LoginResponse{
-		User:  uc.toUserResponseFromCommon(user),
-		Token: token,
+		User:         uc.toUserResponseFromCommon(user),
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
 	}, nil
 }
 
@@ -124,8 +126,9 @@ func (uc *UserUseCase) AdminLogin(ctx context.Context, req LoginRequest) (*Login
 		return nil, ErrUserNotFound
 	}
 	return &LoginResponse{
-		User:  uc.toUserResponseFromCommon(user),
-		Token: token,
+		User:         uc.toUserResponseFromCommon(user),
+		AccessToken:  token,
+		RefreshToken: "",
 	}, nil
 }
 

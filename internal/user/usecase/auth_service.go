@@ -4,9 +4,13 @@ import (
 	"coffe/internal/auth"
 	"coffe/internal/common"
 	"coffe/internal/user/entity"
+	"time"
 
 	"context"
 	"errors"
+
+	"crypto/rand"
+	"encoding/base64"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -18,50 +22,65 @@ type UserRepository interface {
 	GetUserByEmail(ctx context.Context, email string) (*common.User, error)
 	GetRoleByName(ctx context.Context, name string) (*common.Role, error)
 	CheckUserExists(ctx context.Context, email string) (bool, error)
+	GetUserByID(ctx context.Context, id uuid.UUID) (*common.User, error)
+}
+
+// TokenRepository определяет методы для хранения и получения refresh-токенов.
+type TokenRepository interface {
+	SetToken(ctx context.Context, userID string, token string, ttl time.Duration) error
+	GetToken(ctx context.Context, userID string) (string, error)
+	DeleteToken(ctx context.Context, userID string) error
 }
 
 // AuthService реализует логику аутентификации пользователей.
 type AuthService struct {
 	userRepo   UserRepository
 	jwtService *auth.JWTService
+	tokenRepo  TokenRepository
 }
 
 // NewAuthService создает новый экземпляр AuthService.
-func NewAuthService(userRepo UserRepository, jwtService *auth.JWTService) *AuthService {
+func NewAuthService(userRepo UserRepository, jwtService *auth.JWTService, tokenRepo TokenRepository) *AuthService {
 	return &AuthService{
 		userRepo:   userRepo,
 		jwtService: jwtService,
+		tokenRepo:  tokenRepo,
 	}
 }
 
-// Login выполняет аутентификацию пользователя и возвращает JWT-токен.
-func (s *AuthService) Login(ctx context.Context, email, password string) (string, error) {
+// Login выполняет аутентификацию пользователя и возвращает access-токен, refresh-токен и userID.
+func (s *AuthService) Login(ctx context.Context, email, password string) (string, string, uuid.UUID, error) {
 	if email == "" {
-		return "", errors.New("email не может быть пустым")
+		return "", "", uuid.Nil, errors.New("email не может быть пустым")
 	}
 	if password == "" {
-		return "", errors.New("пароль не может быть пустым")
+		return "", "", uuid.Nil, errors.New("пароль не может быть пустым")
 	}
 
 	user, err := s.userRepo.GetUserByEmail(ctx, email)
 	if err != nil {
-		return "", errors.New("пользователь не найден")
+		return "", "", uuid.Nil, errors.New("пользователь не найден")
 	}
 
 	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
 	if err != nil {
 		if err == bcrypt.ErrMismatchedHashAndPassword {
-			return "", errors.New("неверный пароль")
+			return "", "", uuid.Nil, errors.New("неверный пароль")
 		}
-		return "", err
+		return "", "", uuid.Nil, err
 	}
 
-	token, err := s.jwtService.GenerateJWTToken(user.ID.String())
+	accessToken, err := s.jwtService.GenerateJWTToken(user.ID.String(), user.Role.Name)
 	if err != nil {
-		return "", errors.New("ошибка генерации токена")
+		return "", "", uuid.Nil, errors.New("ошибка генерации токена")
 	}
 
-	return token, nil
+	refreshToken, err := s.GenerateRefreshToken(ctx, user.ID)
+	if err != nil {
+		return "", "", uuid.Nil, errors.New("ошибка генерации refresh токена")
+	}
+
+	return accessToken, refreshToken, user.ID, nil
 }
 
 // AdminLogin выполняет аутентификацию администратора
@@ -91,7 +110,7 @@ func (s *AuthService) AdminLogin(ctx context.Context, email, password string) (s
 		return "", err
 	}
 
-	token, err := s.jwtService.GenerateJWTToken(user.ID.String())
+	token, err := s.jwtService.GenerateJWTToken(user.ID.String(), user.Role.Name)
 	if err != nil {
 		return "", errors.New("ошибка генерации токена")
 	}
@@ -137,4 +156,52 @@ func (s *AuthService) Register(ctx context.Context, user *common.User) (uuid.UUI
 	}
 
 	return user.ID, nil
+}
+
+// generateSecureToken генерирует криптостойкий случайный токен длиной n байт.
+func generateSecureToken(n int) (string, error) {
+	b := make([]byte, n)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return base64.URLEncoding.EncodeToString(b), nil
+}
+
+// GenerateRefreshToken создает и сохраняет refresh-токен для пользователя.
+func (s *AuthService) GenerateRefreshToken(ctx context.Context, userID uuid.UUID) (string, error) {
+	token, err := generateSecureToken(32)
+	if err != nil {
+		return "", err
+	}
+	ttl := 7 * 24 * time.Hour
+	if err := s.tokenRepo.SetToken(ctx, userID.String(), token, ttl); err != nil {
+		return "", err
+	}
+	return token, nil
+}
+
+// RefreshTokens проверяет refresh-токен и выдает новые токены.
+func (s *AuthService) RefreshTokens(ctx context.Context, userID uuid.UUID, refreshToken string) (string, string, error) {
+	storedToken, err := s.tokenRepo.GetToken(ctx, userID.String())
+	if err != nil || storedToken != refreshToken {
+		return "", "", errors.New("ошибочны востановочный токен")
+	}
+	user, err := s.userRepo.GetUserByID(ctx, userID)
+	if err != nil {
+		return "", "", err
+	}
+	accessToken, err := s.jwtService.GenerateJWTToken(userID.String(), user.Role.Name)
+	if err != nil {
+		return "", "", err
+	}
+	newRefreshToken, err := s.GenerateRefreshToken(ctx, userID)
+	if err != nil {
+		return "", "", err
+	}
+	return accessToken, newRefreshToken, nil
+}
+
+// Logout удаляет refresh-токен пользователя.
+func (s *AuthService) Logout(ctx context.Context, userID uuid.UUID) error {
+	return s.tokenRepo.DeleteToken(ctx, userID.String())
 }
