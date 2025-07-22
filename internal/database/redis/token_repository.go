@@ -24,12 +24,7 @@ func (r *TokenRepository) key(userID string) string {
 }
 
 func (r *TokenRepository) GetToken(ctx context.Context, userID string) (string, error) {
-	val, err := r.client.Get(ctx, r.key(userID)).Result()
-	if err != redis.Nil {
-		return "", nil
-	}
-
-	return val, err
+	return r.client.Get(ctx, r.key(userID)).Result()
 }
 
 func (r *TokenRepository) DeleteToken(ctx context.Context, userID string) error {

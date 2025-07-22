@@ -7,11 +7,15 @@ import (
 )
 
 type JWTService struct {
-	secret []byte
+	secret   []byte
+	tokenTTL time.Duration
 }
 
-func NewJWTService(secret string) *JWTService {
-	return &JWTService{secret: []byte(secret)}
+func NewJWTService(secret string, tokenTTL time.Duration) *JWTService {
+	return &JWTService{
+		secret:   []byte(secret),
+		tokenTTL: tokenTTL,
+	}
 }
 
 type Claims struct {
@@ -22,7 +26,7 @@ type Claims struct {
 
 // GenerateJWTToken создает JWT токен для пользователя с ролью
 func (j *JWTService) GenerateJWTToken(userID string, role string) (string, error) {
-	expirationTime := time.Now().Add(24 * time.Hour)
+	expirationTime := time.Now().Add(j.tokenTTL)
 	claims := &Claims{
 		UserID: userID,
 		Role:   role,
