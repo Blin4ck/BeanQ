@@ -88,7 +88,7 @@ func (uc *UserUseCase) RegisterUser(ctx context.Context, req RegisterRequest) er
 		Email:    req.Email,
 		Password: req.Password,
 	}
-	_, err := uc.authService.Register(ctx, user)
+	_, _, _, err := uc.authService.Register(ctx, user)
 	return err
 }
 
@@ -117,7 +117,7 @@ func (uc *UserUseCase) AdminLogin(ctx context.Context, req LoginRequest) (*Login
 	if err := uc.validateLoginRequest(req); err != nil {
 		return nil, err
 	}
-	token, err := uc.authService.AdminLogin(ctx, req.Email, req.Password)
+	accessToken, refreshToken, err := uc.authService.AdminLogin(ctx, req.Email, req.Password)
 	if err != nil {
 		return nil, err
 	}
@@ -127,8 +127,8 @@ func (uc *UserUseCase) AdminLogin(ctx context.Context, req LoginRequest) (*Login
 	}
 	return &LoginResponse{
 		User:         uc.toUserResponseFromCommon(user),
-		AccessToken:  token,
-		RefreshToken: "",
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
 	}, nil
 }
 
