@@ -18,6 +18,10 @@ type JWTMiddleware struct {
 	userRepo   UserRepository
 }
 
+func (m *JWTMiddleware) RefreshTokens(context context.Context, param any, param3 any) (any, any) {
+	panic("unimplemented")
+}
+
 type UserRepository interface {
 	GetUserByID(ctx context.Context, id uuid.UUID) (*common.User, error)
 }

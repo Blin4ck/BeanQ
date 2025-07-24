@@ -167,6 +167,19 @@ func (uc *UserUseCase) GetUsersByRole(ctx context.Context, roleName string) ([]U
 	return responses, nil
 }
 
+// GetAllUsers возвращает всех пользователей (админская функция).
+func (uc *UserUseCase) GetAllUsers(ctx context.Context) ([]UserResponse, error) {
+	users, err := uc.userRepo.GetAllUsers(ctx)
+	if err != nil {
+		return nil, err
+	}
+	responses := make([]UserResponse, len(users))
+	for i, user := range users {
+		responses[i] = uc.toUserResponseFromCommon(user)
+	}
+	return responses, nil
+}
+
 // ChangePassword меняет пароль пользователя с проверкой старого пароля и хешированием нового.
 func (uc *UserUseCase) ChangePassword(ctx context.Context, req ChangePasswordRequest) error {
 	user, err := uc.userRepo.GetUserByID(ctx, req.UserID)
@@ -217,17 +230,23 @@ func (uc *UserUseCase) validateLoginRequest(req LoginRequest) error {
 	return nil
 }
 
+// RefreshTokens обновляет токены пользователя.
+func (uc *UserUseCase) RefreshTokens(ctx context.Context, userID uuid.UUID, refreshToken string) (string, string, error) {
+	return uc.authService.RefreshTokens(ctx, userID, refreshToken)
+}
+
 // toUserResponseFromCommon преобразует common.User в UserResponse для API.
 func (uc *UserUseCase) toUserResponseFromCommon(user *common.User) UserResponse {
-	roleName := ""
-	if user.Role != nil {
-		roleName = user.Role.Name
-	}
 	return UserResponse{
 		ID:      user.ID,
 		Name:    user.Name,
 		Surname: user.Surname,
 		Email:   user.Email,
-		Role:    roleName,
+		Role:    user.Role.Name,
 	}
+}
+
+// Logout выполняет выход пользователя из системы.
+func (uc *UserUseCase) Logout(ctx context.Context, userID uuid.UUID) error {
+	return uc.authService.Logout(ctx, userID)
 }
