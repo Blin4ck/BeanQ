@@ -152,3 +152,15 @@ func (r *UserRepository) UpdatePassword(ctx context.Context, id uuid.UUID, newPa
 		Where("id = ?", id).
 		Update("password", newPassword).Error
 }
+
+// GetAllUsers получает всех пользователей из базы данных
+func (r *UserRepository) GetAllUsers(ctx context.Context) ([]*common.User, error) {
+	var users []*common.User
+	err := r.db.WithContext(ctx).
+		Preload("Role").
+		Find(&users).Error
+	if err != nil {
+		return nil, err
+	}
+	return users, nil
+}
