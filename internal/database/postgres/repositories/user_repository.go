@@ -98,7 +98,7 @@ func (r *UserRepository) DeleteUser(ctx context.Context, id uuid.UUID) error {
 }
 
 // UpdateUserRole обновляет роль пользователя
-func (r *UserRepository) UpdateUserRole(ctx context.Context, userID uuid.UUID, newRoleID int) error {
+func (r *UserRepository) UpdateUserRole(ctx context.Context, userID uuid.UUID, newRoleID uuid.UUID) error {
 	if userID == uuid.Nil {
 		return errors.New("ID пользователя не может быть пустым")
 	}

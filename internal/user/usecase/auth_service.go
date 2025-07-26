@@ -70,7 +70,7 @@ func (s *AuthService) Login(ctx context.Context, email, password string) (string
 		return "", "", uuid.Nil, err
 	}
 
-	accessToken, err := s.jwtService.GenerateJWTToken(user.ID.String(), user.Role.Name)
+	accessToken, err := s.jwtService.GenerateJWTToken(user.ID.String(), user.Role.Name, user.Role.ID.String())
 	if err != nil {
 		return "", "", uuid.Nil, errors.New("ошибка генерации токена")
 	}
@@ -110,7 +110,7 @@ func (s *AuthService) AdminLogin(ctx context.Context, email, password string) (s
 		return "", "", err
 	}
 
-	accessToken, err := s.jwtService.GenerateJWTToken(user.ID.String(), user.Role.Name)
+	accessToken, err := s.jwtService.GenerateJWTToken(user.ID.String(), user.Role.Name, user.Role.ID.String())
 	if err != nil {
 		return "", "", errors.New("ошибка генерации токена")
 	}
@@ -161,7 +161,7 @@ func (s *AuthService) Register(ctx context.Context, user *common.User) (string, 
 	}
 
 	// Генерируем токены
-	accessToken, err := s.jwtService.GenerateJWTToken(user.ID.String(), user.Role.Name)
+	accessToken, err := s.jwtService.GenerateJWTToken(user.ID.String(), user.Role.Name, user.Role.ID.String())
 	if err != nil {
 		return "", "", uuid.Nil, errors.New("ошибка генерации токена")
 	}
@@ -206,7 +206,7 @@ func (s *AuthService) RefreshTokens(ctx context.Context, userID uuid.UUID, refre
 	if err != nil {
 		return "", "", err
 	}
-	accessToken, err := s.jwtService.GenerateJWTToken(userID.String(), user.Role.Name)
+	accessToken, err := s.jwtService.GenerateJWTToken(userID.String(), user.Role.Name, user.Role.ID.String())
 	if err != nil {
 		return "", "", err
 	}
@@ -221,3 +221,5 @@ func (s *AuthService) RefreshTokens(ctx context.Context, userID uuid.UUID, refre
 func (s *AuthService) Logout(ctx context.Context, userID uuid.UUID) error {
 	return s.tokenRepo.DeleteToken(ctx, userID.String())
 }
+
+//придумать как реализовать то чтобы у всех ролей были свои точки доступа, учитывая, что у админа есть все права и при добавлении новой роли можно было бы выбирать что она может, а что нет.

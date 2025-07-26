@@ -21,15 +21,17 @@ func NewJWTService(secret string, tokenTTL time.Duration) *JWTService {
 type Claims struct {
 	UserID string `json:"user_id"`
 	Role   string `json:"role"`
+	RoleID string `json:"role_id"`
 	jwt.RegisteredClaims
 }
 
 // GenerateJWTToken создает JWT токен для пользователя с ролью
-func (j *JWTService) GenerateJWTToken(userID string, role string) (string, error) {
+func (j *JWTService) GenerateJWTToken(userID string, role string, roleID string) (string, error) {
 	expirationTime := time.Now().Add(j.tokenTTL)
 	claims := &Claims{
 		UserID: userID,
 		Role:   role,
+		RoleID: roleID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 		},

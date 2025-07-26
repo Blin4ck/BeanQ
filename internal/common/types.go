@@ -16,8 +16,8 @@ type User struct {
 
 // Role представляет роль пользователя.
 type Role struct {
-	ID   int    `json:"id" db:"id"`
-	Name string `json:"name" db:"name"`
+	ID   uuid.UUID `json:"id" db:"id"`
+	Name string    `json:"name" db:"name"`
 }
 
 // Product представляет продукт меню.

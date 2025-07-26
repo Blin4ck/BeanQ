@@ -79,7 +79,7 @@ func (m *JWTMiddleware) Authenticate() gin.HandlerFunc {
 		}
 		ctx.Set("user", user)
 		ctx.Set("user_id", user.ID)
-		ctx.Set("role", claims.Role)
+		ctx.Set("role_id", claims.RoleID)
 		ctx.Next()
 	}
 }

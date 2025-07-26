@@ -20,8 +20,9 @@ type User struct {
 
 // Role представляет роль пользователя.
 type Role struct {
-	ID   int    `json:"id" db:"id"`
-	Name string `json:"name" db:"name"`
+	ID           int       `json:"id" db:"id"`
+	Name         string    `json:"name" db:"name"`
+	PermissionID uuid.UUID `db:"permission_id"`
 }
 
 // ValidateUser проверяет корректность данных пользователя.

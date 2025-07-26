@@ -2,20 +2,21 @@ package http
 
 import (
 	"coffe/internal/middleware"
+	"coffe/internal/user/usecase"
 
 	"github.com/gin-gonic/gin"
 )
 
 // SetupUserRoutes настраивает все маршруты для пользовательского модуля
-func SetupUserRoutes(router *gin.RouterGroup, handler *UserHandler, middleware *middleware.JWTMiddleware) {
+func SetupUserRoutes(router *gin.RouterGroup, handler *UserHandler, jwtMiddleware *middleware.JWTMiddleware, permissionUC usecase.PermissionUsecase) {
 	// Публичные маршруты аутентификации
 	setupAuthRoutes(router, handler)
 
 	// Защищенные пользовательские маршруты
-	setupProtectedUserRoutes(router, handler, middleware)
+	setupProtectedUserRoutes(router, handler, jwtMiddleware)
 
 	// Админские маршруты
-	setupAdminRoutes(router, handler, middleware)
+	setupAdminRoutes(router, handler, jwtMiddleware, permissionUC)
 }
 
 // setupAuthRoutes настраивает публичные маршруты аутентификации
@@ -33,9 +34,9 @@ func setupAuthRoutes(router *gin.RouterGroup, handler *UserHandler) {
 }
 
 // setupProtectedUserRoutes настраивает защищенные пользовательские маршруты
-func setupProtectedUserRoutes(router *gin.RouterGroup, handler *UserHandler, middleware *middleware.JWTMiddleware) {
+func setupProtectedUserRoutes(router *gin.RouterGroup, handler *UserHandler, jwtMiddleware *middleware.JWTMiddleware) {
 	protected := router.Group("/users")
-	protected.Use(middleware.Authenticate())
+	protected.Use(jwtMiddleware.Authenticate())
 	{
 		// Управление профилем
 		protected.GET("/profile", handler.GetProfile)
@@ -48,15 +49,15 @@ func setupProtectedUserRoutes(router *gin.RouterGroup, handler *UserHandler, mid
 }
 
 // setupAdminRoutes настраивает админские маршруты
-// Эти маршруты требуют JWT токен + роль администратора
-func setupAdminRoutes(router *gin.RouterGroup, handler *UserHandler, middleware *middleware.JWTMiddleware) {
+// Эти маршруты требуют JWT токен + роль администратора + проверку разрешений
+func setupAdminRoutes(router *gin.RouterGroup, handler *UserHandler, jwtMiddleware *middleware.JWTMiddleware, permissionUC usecase.PermissionUsecase) {
 	admin := router.Group("/admin/users")
-	admin.Use(middleware.Authenticate())
-	admin.Use(middleware.RequireRole("admin"))
+	admin.Use(jwtMiddleware.Authenticate())
+	admin.Use(jwtMiddleware.RequireRole("admin"))
 	{
-		admin.GET("", handler.GetAllUsers)
-		admin.GET("/:id", handler.GetUserByID)
-		admin.GET("/role/:role", handler.GetUsersByRole)
+		admin.GET("", middleware.PermissionMiddleware(permissionUC, "read_user"), handler.GetAllUsers)
+		admin.GET("/:id", middleware.PermissionMiddleware(permissionUC, "read_user"), handler.GetUserByID)
+		admin.GET("/role/:role", middleware.PermissionMiddleware(permissionUC, "read_user"), handler.GetUsersByRole)
 	}
 }
 
