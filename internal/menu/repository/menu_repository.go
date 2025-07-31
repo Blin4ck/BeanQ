@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"coffe/internal/menu/delivery/http/dto"
 	"coffe/internal/menu/entity"
 	"context"
 
@@ -9,14 +10,15 @@ import (
 
 type MenuRepository interface {
 	// Методы для работы с меню
-	Create(ctx context.Context, menu *entity.Menu) error             // создание меню
-	GetByID(ctx context.Context, id uuid.UUID) (*entity.Menu, error) // меню по id
-	GetActive(ctx context.Context) ([]*entity.Menu, error)           // активные меню
-	GetAll(ctx context.Context) ([]*entity.Menu, error)              // все меню
-	Update(ctx context.Context, menu *entity.Menu) error             // обновление меню
-	Delete(ctx context.Context, id uuid.UUID) error                  // удаление меню
-	Activate(ctx context.Context, id uuid.UUID) error                // активировать меню
-	Deactivate(ctx context.Context, id uuid.UUID) error              // деактивировать меню
+	Create(ctx context.Context, menu *entity.Menu) error                                        // создание меню
+	GetByID(ctx context.Context, id uuid.UUID) (*entity.Menu, error)                            // меню по id
+	GetActive(ctx context.Context) ([]*entity.Menu, error)                                      // активные меню
+	GetAll(ctx context.Context) ([]*entity.Menu, error)                                         // все меню
+	Update(ctx context.Context, menu *entity.Menu) error                                        // обновление меню
+	Delete(ctx context.Context, id uuid.UUID) error                                             // удаление меню
+	Activate(ctx context.Context, id uuid.UUID) error                                           // активировать меню
+	Deactivate(ctx context.Context, id uuid.UUID) error                                         // деактивировать меню
+	SearchMenuItems(ctx context.Context, search *dto.MenuSearchDTO) ([]*entity.MenuItem, error) // поиск позиций меню
 
 	// Методы для работы с категориями
 	CreateCategory(ctx context.Context, category *entity.MenuCategory) error                   // создание категории
@@ -40,4 +42,5 @@ type MenuRepository interface {
 	// Утилиты
 	Count(ctx context.Context) (int64, error)               // количество меню
 	Exists(ctx context.Context, id uuid.UUID) (bool, error) // проверить существование
+
 }
