@@ -1,6 +1,7 @@
 package usecase
 
 import (
+	"coffe/internal/menu/delivery/http/dto"
 	"coffe/internal/menu/entity"
 	"coffe/internal/menu/repository"
 	"context"
@@ -334,6 +335,24 @@ func (u *MenuUsecase) GetMenuItemsByMenu(ctx context.Context, menuID uuid.UUID) 
 	}
 
 	return items, nil
+}
+
+func (u *MenuUsecase) SearchMenuItems(ctx context.Context, dto dto.MenuSearchDTO) ([]*entity.MenuItem, int64, error) {
+	if dto.Query == "" && dto.MenuID == uuid.Nil && dto.CategoryID == uuid.Nil && dto.ProductID == uuid.Nil {
+		return nil, 0, errors.New("необходимо указать хотя бы один критерий поиска")
+	}
+	if dto.Pagination.Page < 1 || dto.Pagination.PageSize < 1 {
+		return nil, 0, errors.New("неверные параметры пагинации")
+	}
+	items, err := u.menuRepo.SearchMenuItems(ctx, &dto)
+	if err != nil {
+		return nil, 0, errors.New("ошибка при поиске позиций меню")
+	}
+	count, err := u.menuRepo.Count(ctx)
+	if err != nil {
+		return nil, 0, errors.New("ошибка при подсчете количества позиций меню")
+	}
+	return items, count, nil
 }
 
 // ===== УТИЛИТЫ =====

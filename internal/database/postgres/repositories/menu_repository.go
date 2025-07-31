@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"coffe/internal/menu/delivery/http/dto"
 	"coffe/internal/menu/entity"
 	"context"
 	"errors"
@@ -260,6 +261,70 @@ func (r *MenuRepository) GetMenuItemsByMenu(ctx context.Context, menuID uuid.UUI
 		return nil, err
 	}
 	return items, nil
+}
+
+func (r *MenuRepository) SearchMenuItems(ctx context.Context, dto dto.MenuSearchDTO) ([]*entity.MenuItem, int64, error) {
+	query := r.db.Model(&entity.MenuItem{}).
+		Preload("Product").
+		Preload("Category")
+
+	// Применяем фильтры
+	if dto.Query != "" {
+		query = query.Where("name LIKE ?", "%"+dto.Query+"%")
+	}
+
+	if dto.MenuID != uuid.Nil {
+		query = query.Where("menu_id = ?", dto.MenuID)
+	}
+
+	if dto.CategoryID != uuid.Nil {
+		query = query.Where("category_id = ?", dto.CategoryID)
+	}
+
+	if dto.ProductID != uuid.Nil {
+		query = query.Where("product_id = ?", dto.ProductID)
+	}
+
+	if dto.IsActive != nil {
+		query = query.Where("is_active = ?", *dto.IsActive)
+	}
+
+	if dto.PriceRange[0] > 0 {
+		query = query.Where("price >= ?", dto.PriceRange[0])
+	}
+
+	if dto.PriceRange[1] > 0 {
+		query = query.Where("price <= ?", dto.PriceRange[1])
+	}
+
+	// Применяем сортировку
+	if dto.Sorting.Field != "" {
+		order := dto.Sorting.Field
+		if dto.Sorting.Order != "" {
+			order += " " + dto.Sorting.Order
+		}
+		query = query.Order(order)
+	}
+
+	// Получаем общее количество (для пагинации)
+	var total int64
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	// Применяем пагинацию
+	if dto.Pagination.PageSize > 0 {
+		offset := (dto.Pagination.Page - 1) * dto.Pagination.PageSize
+		query = query.Offset(offset).Limit(dto.Pagination.PageSize)
+	}
+
+	// Выполняем запрос
+	var items []*entity.MenuItem
+	if err := query.Find(&items).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return items, total, nil
 }
 
 // ===== УТИЛИТЫ =====
